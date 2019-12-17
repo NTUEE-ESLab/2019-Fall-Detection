@@ -1,0 +1,40 @@
+{
+    "config": {
+        "wifi-shield": {
+            "help": "Options are internal, WIFIIDW0XX1",
+            "value": "\"WIFI_ISM43362\""
+        },
+        "wifi-ssid": {
+            "help": "WiFi SSID",
+            "value": "\"esys-Dlink652\""
+        },
+        "wifi-password": {
+            "help": "WiFi Password",
+            "value": "\"305305abcd\""
+        }
+    },
+    "target_overrides": {
+        "*": {
+            "platform.stdio-convert-newlines": true
+            
+        },
+        "DISCO_L475VG_IOT1A": {
+    "wifi-miso": "PC_11",
+    "wifi-mosi": "PC_12",
+    "wifi-sclk": "PC_10",
+    "wifi-nss": "PE_0",
+    "wifi-reset": "PE_8",
+    "wifi-dataready": "PE_1",
+    "wifi-wakeup": "PB_13"
+},
+"DISCO_F413ZH": {
+    "wifi-spi_miso": "PB_4",
+    "wifi-spi_mosi": "PB_5",
+    "wifi-spi_sclk": "PB_12",
+    "wifi-spi_nss": "PG_11",
+    "wifi-reset": "PH_1",
+    "wifi-dataready": "PG_12",
+    "wifi-wakeup": "PB_15"
+}
+    }
+}

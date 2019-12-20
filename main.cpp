@@ -21,7 +21,24 @@
 #include "TCPServer.h"
 #include "stm32l475e_iot01_accelero.h"
 #include <stdlib.h>
+#include <queue>
+#include <cmath>
 
+//forward decla. of Viterbi
+typedef struct{
+	char model_name;
+	int state_num = 3;
+	int observ_num = 8;
+	double initial[3];			//initial prob.
+                                //usage: initial[s] = initial prob. of state s
+	double transition[3][3];	//transition prob.
+                                //usage: transition[n_s][c_s] = prob. from current state c_s to next state n_s
+	double observation[8][3];	//observation prob.
+                                //usage: observation[o_v][s] = prob. of seeing observation value o_v at state s
+} HMM;
+
+void viterbi(HMM*, int, int*, int, double*);
+//end of forward decla. of Viterbi
 
 #define WIFI_IDW0XX1    2
 
@@ -91,13 +108,14 @@ void acc_server(NetworkInterface *net)
     TCPServer socket;
     TCPSocket* client;*/
     TCPSocket socket;
-    SocketAddress addr("192.168.5.111",65431);
+    SocketAddress addr("192.168.1.237",65431);
     nsapi_error_t response;
 
     int16_t pDataXYZ[3] = {0};
     char recv_buffer[9];
     char acc_json[64];
     int sample_num = 0;
+    queue<double> window;
 
     
 
@@ -114,7 +132,7 @@ void acc_server(NetworkInterface *net)
 
 
     
-    while (sample_num < 1000){
+    /*while (sample_num < 1000){
         ++sample_num;
         BSP_ACCELERO_AccGetXYZ(pDataXYZ);
         float x = pDataXYZ[0]*SCALE_MULTIPLIER, y = pDataXYZ[1]*SCALE_MULTIPLIER, z = pDataXYZ[2]*SCALE_MULTIPLIER;
@@ -127,14 +145,50 @@ void acc_server(NetworkInterface *net)
             printf("Error seding: %d\n", response);
         }
         wait(0.01);
-        
-    
+    }*/
 
+    //declaration of Viterbi variables
+    int movement_num = 4;
+    HMM movement_arr[movement_num];
+
+    //end of declaration of Viterbi variables
+    while(1){
+        BSP_ACCELERO_AccGetXYZ(pDataXYZ);
+        float x = pDataXYZ[0]*SCALE_MULTIPLIER, y = pDataXYZ[1]*SCALE_MULTIPLIER, z = pDataXYZ[2]*SCALE_MULTIPLIER;
+        double sqr_sum = x*x + y*y + z*z;
+        double abs_acc = sqrt(sqr_sum);
+        if(abs_acc>11){
+            window.push(7);
+        }
+        else if(abs_acc>8.7){
+            window.push(6);
+        }
+        else if(abs_acc>6.6){
+            window.push(5);
+        }
+        else if(abs_acc>4.7){
+            window.push(4);
+        }
+        else if(abs_acc>3.4){
+            window.push(3);
+        }
+        else if(abs_acc>2.2){
+            window.push(2);
+        }
+        else if(abs_acc>1.1){
+            window.push(1);
+        }
+        else{
+            window.push(0);
+        }
+        if (window.size()==150){
+            //masturbate
+            window.pop();
+        }
     }
-
- 
     socket.close();
 }
+
 
 int main()
 {
@@ -155,12 +209,46 @@ int main()
     printf("RSSI: %d\n\n", wifi.get_rssi());
 
 
-
     BSP_ACCELERO_Init();    
-
 
     acc_server(&wifi);
 
 
 
+}
+void viterbi(HMM* hmm, int seqlen, int* seq, int model_num, double* p) {
+	
+
+	for(int i=0;i<model_num;i++)
+	{
+		double viterbi[hmm[model_num].state_num][seqlen];
+		for(int j=0;j<hmm[model_num].state_num;j++)
+		{
+			viterbi[j][0]=hmm[i].initial[j]*hmm[i].observation[seq[0]][j];
+		}
+		for(int k=1;k<seqlen;k++)
+		{
+			for(int l=0;l<hmm[model_num].state_num;l++)
+			{
+				double max=0;
+				for(int m=0;m<hmm[model_num].state_num;m++)
+				{
+					if(viterbi[m][k-1]*hmm[i].transition[m][l]>max)
+					{
+						max=viterbi[m][k-1]*hmm[i].transition[m][l];
+					}
+				}
+				viterbi[l][k]=max*hmm[i].observation[seq[k]][l];
+			}
+		}
+		for(int a=0;a<hmm[model_num].state_num;a++)
+		{
+			if(viterbi[a][seqlen-1]>p[i])
+			{
+				p[i]=viterbi[a][seqlen-1];
+			}
+		}
+	}
+	//return p;
+	
 }

@@ -115,9 +115,11 @@ void acc_server(NetworkInterface *net)
     char recv_buffer[9];
     char acc_json[64];
     int sample_num = 0;
-    queue<double> window;
-
-    
+    //queue<double> window;
+    const int buff_size = 1500;
+    const int win_size = 150;
+    int iter = 0;
+    int buffer[buff_size];
 
     // Open a socket on the network interface, and create a TCP connection to addr
     response = socket.open(net);
@@ -138,7 +140,6 @@ void acc_server(NetworkInterface *net)
         float x = pDataXYZ[0]*SCALE_MULTIPLIER, y = pDataXYZ[1]*SCALE_MULTIPLIER, z = pDataXYZ[2]*SCALE_MULTIPLIER;
         int len = sprintf(acc_json,"%f,%f,%f,",(float)((int)(x*10000))/10000,
                                         (float)((int)(y*10000))/10000, (float)((int)(z*10000))/10000);
-
             
         response = socket.send(acc_json,len);
         if (0 >= response){
@@ -150,6 +151,7 @@ void acc_server(NetworkInterface *net)
     //declaration of Viterbi variables
     int movement_num = 4;
     HMM movement_arr[movement_num];
+    double prob[movement_num];
 
     //end of declaration of Viterbi variables
     while(1){
@@ -158,32 +160,56 @@ void acc_server(NetworkInterface *net)
         double sqr_sum = x*x + y*y + z*z;
         double abs_acc = sqrt(sqr_sum);
         if(abs_acc>11){
-            window.push(7);
+            buffer[iter] = 7;
         }
         else if(abs_acc>8.7){
-            window.push(6);
+            buffer[iter] = 6;
         }
         else if(abs_acc>6.6){
-            window.push(5);
+            buffer[iter] = 5;
         }
         else if(abs_acc>4.7){
-            window.push(4);
+            buffer[iter] = 4;
         }
         else if(abs_acc>3.4){
-            window.push(3);
+            buffer[iter] = 3;
         }
         else if(abs_acc>2.2){
-            window.push(2);
+            buffer[iter] = 2;
         }
         else if(abs_acc>1.1){
-            window.push(1);
+            buffer[iter] = 1;
         }
         else{
-            window.push(0);
+            buffer[iter] = 0;
         }
-        if (window.size()==150){
-            //masturbate
-            window.pop();
+        //++iter;
+        if (iter>=win_size-1){
+            //run viterbi and send data
+            viterbi(movement_arr, win_size, buffer + (iter - win_size + 1), movement_num, prob);
+            if(iter==buff_size-1){
+                memcpy(buffer, buffer + (iter - win_size + 1), win_size*sizeof(int));
+                iter = win_size - 1;
+            }
+            //end of viterbi
+            //select maximum movement
+            double max = 0;
+            int argmax = 0;
+            for (int i = 0; i < movement_num; ++i){
+                if(prob[i]>=max){
+                    max = prob[i];
+                    argmax = i;
+                }
+            }
+            //end of movement selection
+            
+            response = socket.send(&argmax,1);
+            if (0 >= response){
+                printf("Error seding: %d\n", response);
+            }
+            wait(0.01);
+            
+            
         }
     }
     socket.close();

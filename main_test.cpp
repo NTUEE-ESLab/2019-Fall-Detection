@@ -27,22 +27,38 @@
 #include <string.h>
 #include <unistd.h>
 #include <iostream>
+#include <fstream>
 using namespace std;
+
+#ifndef STATE_NUM
+#	define STATE_NUM	3
+#endif
+
+#ifndef OBSERV_NUM
+#	define OBSERV_NUM	8
+#endif
+
+#ifndef MOVEMENT_NUM
+#   define MOVEMENT_NUM 5
+#endif
+
 
 //forward decla. of Viterbi
 typedef struct{
-	char model_name;
-	int state_num = 3;
-	int observ_num = 8;
-	double initial[3];			//initial prob.
+	char* model_name;
+	int state_num;
+	int observ_num;
+	double initial[STATE_NUM];			//initial prob.
                                 //usage: initial[s] = initial prob. of state s
-	double transition[3][3];	//transition prob.
+	double transition[STATE_NUM][STATE_NUM];	//transition prob.
                                 //usage: transition[n_s][c_s] = prob. from current state c_s to next state n_s
-	double observation[8][3];	//observation prob.
+	double observation[OBSERV_NUM][STATE_NUM];	//observation prob.
                                 //usage: observation[o_v][s] = prob. of seeing observation value o_v at state s
 } HMM;
 
-void viterbi(HMM*, int, int*, int, double*);
+void HMM_init(HMM *, char *, int, int, double[], double[][STATE_NUM], double[][STATE_NUM]);
+static void dumpHMM(FILE *, HMM *);
+void viterbi(HMM *, int, int *, int, double *);
 //end of forward decla. of Viterbi
 /*
 #define WIFI_IDW0XX1    2
@@ -107,7 +123,7 @@ int scan_demo(WiFiInterface *wifi)
     return count;
 }
 */
-void acc_server()
+void acc_server(char** argv)
 {
     /* 
     TCPServer socket;
@@ -125,6 +141,7 @@ void acc_server()
     const int buff_size = 450;
     const int win_size = 150;
     int iter = 0;
+    //int true_iter = 0;
     int buffer[buff_size];
 
     // Open a socket on the network interface, and create a TCP connection to addr
@@ -156,22 +173,22 @@ void acc_server()
     }*/
 
     //declaration of Viterbi variables
-    int movement_num = 4;
-    HMM movement_arr[movement_num];
-    double pre_pi[3] = {1,9.57E-77,1.82E-41};
-    double pre_a[3][3] = {{0.938655874,0.128135097,0.195148175},{0.034714224,0.869569486,3.22172E-25},{0.026629902,0.002295417,0.804851825}};
-    double pre_b[8][3] = {
-    {2.05437E-15,0.012571376,5.05122E-13},
-    {2.52998E-22,0.114285236,2.2291E-27},
-    {2.27719E-07,0.873138341,2.53256E-25},
-    {0.999999772,5.04742E-06,0.002870178},
-    {5.84208E-21,3.58201E-37,0.981989022},
-    {7.82575E-51,1.4501E-169,0.0151408},
-    {0,0,0},
-    {0,0,0}};
-    double fall_pi[3] = {1,2.02885E-62,1.4382E-69};
-    double fall_a[3][3]={{0.847339186,0.094980361,0.117705798},{0.075112028,0.883376935,0.029549676},{0.077548786,0.021642704,0.852744525}};
-    double fall_b[8][3]={
+    //int movement_num = 4;
+    HMM movement_arr[MOVEMENT_NUM];
+    double pre_pi[STATE_NUM] = {1,9.57E-77,1.82E-41};
+    double pre_a[STATE_NUM][STATE_NUM] = {{0.938655874,0.128135097,0.195148175},{0.034714224,0.869569486,3.22172E-25},{0.026629902,0.002295417,0.804851825}};
+    double pre_b[OBSERV_NUM][STATE_NUM] = {
+        {2.05437E-15,0.012571376,5.05122E-13},
+        {2.52998E-22,0.114285236,2.2291E-27},
+        {2.27719E-07,0.873138341,2.53256E-25},
+        {0.999999772,5.04742E-06,0.002870178},
+        {5.84208E-21,3.58201E-37,0.981989022},
+        {7.82575E-51,1.4501E-169,0.0151408},
+        {0,0,0},
+        {0,0,0}};
+    double fall_pi[STATE_NUM] = {1,2.02885E-62,1.4382E-69};
+    double fall_a[STATE_NUM][STATE_NUM]={{0.847339186,0.094980361,0.117705798},{0.075112028,0.883376935,0.029549676},{0.077548786,0.021642704,0.852744525}};
+    double fall_b[OBSERV_NUM][STATE_NUM]={
         {1.16527E-35,3.66807E-31,0.015534493},
         {1.76139E-20,0.000531981,0.166125668},
         {5.75741E-07,6.65886E-05,0.81833829},
@@ -180,9 +197,9 @@ void acc_server()
         {1.87443E-14,0.273749465,1.1375E-11},
         {1.3259E-10,0.221482264,3.84995E-25},
         {1.53108E-27,0.038547061,1.69949E-30}};
-    double run_pi[3] = {5.23E-193,1,8.79E-132};
-    double run_a[3][3] = {{0.911397594,0.004520484,0.117142582},{0.016535984,0.928022794,0.105564851},{0.072066422,0.067456722,0.777292568}};
-    double run_b[8][3] = {
+    double run_pi[STATE_NUM] = {5.23E-193,1,8.79E-132};
+    double run_a[STATE_NUM][STATE_NUM] = {{0.911397594,0.004520484,0.117142582},{0.016535984,0.928022794,0.105564851},{0.072066422,0.067456722,0.777292568}};
+    double run_b[OBSERV_NUM][STATE_NUM] = {
         {0.376659084,2.89177E-36,7.32707E-22},
         {0.623340916,1.77971E-11,0.000132496},
         {4.75775E-11,2.94127E-19,0.579184439},
@@ -191,40 +208,57 @@ void acc_server()
         {2.42714E-31,0.497695775,2.88081E-15},
         {5.99981E-26,0.173190837,6.12921E-17},
         {0,0,0}};
-    double walk_pi[3] = {0.008220815,1.15E-36,0.991779185};
-    double walk_a[3][3] = {{0.602985679,0.094537721,0.044079307},{0.03443364,0.789671219,0.025672161},{0.362580682,0.11579106,0.930248533}};
-    double walk_b[8][3] = {{0,0,0},
-                        {5.87575E-13,0.014759726,8.07681E-24},
-                        {0.2586356,6.47283E-12,2.29926E-08},
-                        {0.7413644,2.85666E-05,0.999999977},
-                        {8.79061E-10,0.944622461,1.31672E-11},
-                        {1.47098E-21,0.033209383,2.9217E-26},
-                        {2.06214E-35,0.007379863,3.49125E-42},
-                        {0,0,0}};
-    for (int j = 0; j < 4;j++){
-        movement_arr[j].state_num = 3;
-        movement_arr[j].observ_num = 8;
-    }
-        
-    memcpy(movement_arr[0].initial,pre_pi,sizeof(pre_pi));
-    memcpy(movement_arr[1].initial,fall_pi,sizeof(fall_pi));
-    memcpy(movement_arr[2].initial,run_pi,sizeof(run_pi));
-    memcpy(movement_arr[3].initial,walk_pi,sizeof(walk_pi));
-    memcpy(movement_arr[0].transition,pre_a,sizeof(pre_a));
-    memcpy(movement_arr[1].transition,fall_a,sizeof(fall_a));
-    memcpy(movement_arr[2].transition,run_a,sizeof(run_a));
-    memcpy(movement_arr[3].transition,walk_a,sizeof(walk_a));
-    memcpy(movement_arr[0].observation,pre_b,sizeof(pre_b));
-    memcpy(movement_arr[1].observation,fall_b,sizeof(fall_b));
-    memcpy(movement_arr[2].observation,run_b,sizeof(run_b));
-    memcpy(movement_arr[3].observation,walk_b,sizeof(walk_b));
-    printf("before while loop\n");
+    double walk_pi[STATE_NUM] = {0.008220815,1.15E-36,0.991779185};
+    double walk_a[STATE_NUM][STATE_NUM] = {{0.602985679,0.094537721,0.044079307},{0.03443364,0.789671219,0.025672161},{0.362580682,0.11579106,0.930248533}};
+    double walk_b[OBSERV_NUM][STATE_NUM] = {{0,0,0},
+        {5.87575E-13,0.014759726,8.07681E-24},
+        {0.2586356,6.47283E-12,2.29926E-08},
+        {0.7413644,2.85666E-05,0.999999977},
+        {8.79061E-10,0.944622461,1.31672E-11},
+        {1.47098E-21,0.033209383,2.9217E-26},
+        {2.06214E-35,0.007379863,3.49125E-42},
+        {0,0,0}};
+    double still_pi[STATE_NUM] = {1,0,0};
+    double still_a[STATE_NUM][STATE_NUM] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+    double still_b[OBSERV_NUM][STATE_NUM] = {{0,0,0},
+        {0,0,0},
+        {0,0,0},
+        {1,1,1},
+        {0,0,0},
+        {0,0,0},
+        {0,0,0},
+        {0,0,0}};
+    char *name_0 = "predict";
+    char *name_1 = "fall";
+    char *name_2 = "run";
+    char *name_3 = "walk";
+    char *name_4 = "still";
+    HMM_init(&movement_arr[0], name_0, STATE_NUM, OBSERV_NUM, pre_pi, pre_a, pre_b);
+    HMM_init(&movement_arr[1], name_1, STATE_NUM, OBSERV_NUM, fall_pi, fall_a, fall_b);
+    HMM_init(&movement_arr[2], name_2, STATE_NUM, OBSERV_NUM, run_pi, run_a, run_b);
+    HMM_init(&movement_arr[3], name_3, STATE_NUM, OBSERV_NUM, walk_pi, walk_a, walk_b);
+    HMM_init(&movement_arr[4], name_4, STATE_NUM, OBSERV_NUM, still_pi, still_a, still_b);
+    dumpHMM(stderr, &movement_arr[0]);
+    dumpHMM(stderr, &movement_arr[1]);
+    dumpHMM(stderr, &movement_arr[2]);
+    dumpHMM(stderr, &movement_arr[3]);
+    dumpHMM(stderr, &movement_arr[4]);
     //end of declaration of Viterbi variables
-    int k = 0;
-    while(1){
+    printf("before while loop\n");
+    //int k = 0;
+    int score[MOVEMENT_NUM] = {0};
+    ifstream f;
+    ofstream g;
+    double abs_acc;
+    f.open(argv[1], ios::in);
+    g.open(argv[2], ios::out);
+    for (int i = 0; i < win_size - 1;++i){
+        g << -1 << endl;
+    }
+    while(f>>abs_acc){
         
         printf("after while loop with iter = %d\n", iter);
-        double abs_acc = double(rand() % 32768) / 32768 * 5 +3;
+        //double abs_acc = double(rand() % 32768) / 32768 * 5 +3;
         //double abs_acc = (k++ % 2 == 1) ? 999 : 999;
         
         if(abs_acc>11){
@@ -251,14 +285,11 @@ void acc_server()
         else{
             buffer[iter] = 0;
         }
-        if (iter == win_size-1){
-            printf("fuck me\n");
-        }
         if (iter>=win_size-1){
             //run viterbi and send data
             printf("before running viterbi with iter = %d\n",iter);
-            double prob[movement_num] = {0,0,0,0};
-            viterbi(movement_arr, win_size, buffer + (iter - win_size + 1), movement_num, prob);
+            double prob[MOVEMENT_NUM] = {0};
+            viterbi(movement_arr, win_size, buffer + (iter - win_size + 1), MOVEMENT_NUM, prob);
             printf("finished viterbi\n");
             if(iter==buff_size-1){
                 memcpy(buffer, buffer + (iter - win_size + 1), win_size*sizeof(int));
@@ -268,14 +299,16 @@ void acc_server()
             //select maximum movement
             double max = 0;
             int argmax = 0;
-            for (int i = 0; i < movement_num; ++i){
+            for (int i = 0; i < MOVEMENT_NUM; ++i){
                 if(prob[i]>=max){
                     max = prob[i];
                     argmax = i;
                 }
             }
             //end of movement selection
-            printf("%d",argmax);
+            score[argmax]++;
+            printf("%d\n",argmax);
+            g << argmax << endl;
             /*
             response = socket.send(&argmax,1);
             if (0 >= response){
@@ -284,15 +317,24 @@ void acc_server()
             */
             
         }
+
         iter++;
-        usleep(0.1);
+        //true_iter++;
+        
+        //usleep(1000);
+    }
+    f.close();
+    g.close();
+    for (int i = 0; i < MOVEMENT_NUM;++i){
+        cout << movement_arr[i].model_name << ": " << score[i] << endl;
     }
     //socket.close();
 }
 
 
-int main()
+int main(int argc, char** argv)
 {
+    //cout << 4.94066e-324 * 0.33 << endl;
     /*
     printf("\nConnecting to %s...\n", MBED_CONF_APP_WIFI_SSID);
     //wifi.set_network("192.168.130.105","255.255.255.0","192.168.130.254");
@@ -312,15 +354,49 @@ int main()
 
     BSP_ACCELERO_Init();    
     */
-    printf("fuck\n");
-    acc_server();
+    acc_server(argv);
 
 
 
 }
+void HMM_init(HMM *model, char *name, int state_n, int observ_n, double pi[], double a[][STATE_NUM], double b[][STATE_NUM]){
+    model->model_name = (char *)malloc( sizeof(char) * (strlen( name)+1));
+    strcpy(model->model_name, name);
+    model->state_num = state_n;
+    model->observ_num = observ_n;
+    //printf("sizeof(a) is %d\n", sizeof(a));
+    memcpy(model->initial, pi, sizeof(pi) * STATE_NUM);
+    memcpy(model->transition, a, sizeof(a) * STATE_NUM * STATE_NUM);
+    memcpy(model->observation, b, sizeof(b) * OBSERV_NUM * STATE_NUM);
+}
+
+static void dumpHMM( FILE *fp, HMM *hmm )
+{
+   int i, j;
+
+   //fprintf( fp, "model name: %s\n", hmm->model_name );
+   fprintf( fp, "initial: %d\n", hmm->state_num );
+   for( i = 0 ; i < hmm->state_num - 1; i++ )
+      fprintf( fp, "%.5lf ", hmm->initial[i]);
+   fprintf(fp, "%.5lf\n", hmm->initial[ hmm->state_num - 1 ] );
+
+   fprintf( fp, "\ntransition: %d\n", hmm->state_num );
+   for( i = 0 ; i < hmm->state_num ; i++ ){
+      for( j = 0 ; j < hmm->state_num - 1 ; j++ )
+         fprintf( fp, "%.5lf ", hmm->transition[i][j] );
+      fprintf(fp,"%.5lf\n", hmm->transition[i][hmm->state_num - 1]);
+   }
+
+   fprintf( fp, "\nobservation: %d\n", hmm->observ_num );
+   for( i = 0 ; i < hmm->observ_num ; i++ ){
+      for( j = 0 ; j < hmm->state_num - 1 ; j++ )
+         fprintf( fp, "%.5lf ", hmm->observation[i][j] );
+      fprintf(fp,"%.5lf\n", hmm->observation[i][hmm->state_num - 1]);
+   }
+}
+
 void viterbi(HMM* hmm, int seqlen, int* seq, int model_num, double* p) {
 	printf("calling viterbi\n");
-
 	for(int i=0;i<model_num;i++)
 	{
         //printf("I\n");

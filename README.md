@@ -1,17 +1,17 @@
 # 2019-Fall-Detection
 
-i am the bone of my sword 
+I am the bone of my sword 
 
-steel is my body, and fire is my blood
+Steel is my body, and fire is my blood
 
-i have created over a thousands blade
+I have created over a thousands blade
 
-unknown to death
+Unknown to death
 
-nor known to life
+Nor known to life
 
-have withstood pain to create many weapons
+Have withstood pain to create many weapons
 
-yet, those hands will never hold anything
+Yet, those hands will never hold anything
 
-so as i pray, unlimited blade works
+So as i pray, unlimited blade works!!!

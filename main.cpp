@@ -25,7 +25,6 @@
 #include <queue>
 #include <cmath>
 #include <string.h>
-#include <unistd.h>
 #include <iostream>
 
 #ifndef STATE_NUM
@@ -130,7 +129,6 @@ void acc_server(NetworkInterface *net)
     nsapi_error_t response;
 
     int16_t pDataXYZ[3] = {0};
-    char recv_buffer[9];
     char acc_json[64];
     int sample_num = 0;
     //queue<double> window;
@@ -149,9 +147,6 @@ void acc_server(NetworkInterface *net)
     if (0 != response){
         printf("Error connecting: %d\n", response);
     }
-
-
-    
     /*while (sample_num < 1000){
         ++sample_num;
         BSP_ACCELERO_AccGetXYZ(pDataXYZ);
@@ -168,49 +163,52 @@ void acc_server(NetworkInterface *net)
 
     //declaration of Viterbi variables
     HMM movement_arr[MOVEMENT_NUM];
-    double pre_pi[STATE_NUM] = {1,9.57E-77,1.82E-41};
-    double pre_a[STATE_NUM][STATE_NUM] = {{0.938655874,0.128135097,0.195148175},{0.034714224,0.869569486,3.22172E-25},{0.026629902,0.002295417,0.804851825}};
-    double pre_b[OBSERV_NUM][STATE_NUM] = {
-        {2.05437E-15,0.012571376,5.05122E-13},
-        {2.52998E-22,0.114285236,2.2291E-27},
-        {2.27719E-07,0.873138341,2.53256E-25},
-        {0.999999772,5.04742E-06,0.002870178},
-        {5.84208E-21,3.58201E-37,0.981989022},
-        {7.82575E-51,1.4501E-169,0.0151408},
-        {0,0,0},
-        {0,0,0}};
-    double fall_pi[STATE_NUM] = {1,2.02885E-62,1.4382E-69};
-    double fall_a[STATE_NUM][STATE_NUM]={{0.847339186,0.094980361,0.117705798},{0.075112028,0.883376935,0.029549676},{0.077548786,0.021642704,0.852744525}};
-    double fall_b[OBSERV_NUM][STATE_NUM]={
-        {1.16527E-35,3.66807E-31,0.015534493},
-        {1.76139E-20,0.000531981,0.166125668},
-        {5.75741E-07,6.65886E-05,0.81833829},
-        {0.999946355,0.000510303,1.5493E-06},
-        {5.3069E-05,0.465112339,3.67054E-12},
-        {1.87443E-14,0.273749465,1.1375E-11},
-        {1.3259E-10,0.221482264,3.84995E-25},
-        {1.53108E-27,0.038547061,1.69949E-30}};
-    double run_pi[STATE_NUM] = {5.23E-193,1,8.79E-132};
-    double run_a[STATE_NUM][STATE_NUM] = {{0.911397594,0.004520484,0.117142582},{0.016535984,0.928022794,0.105564851},{0.072066422,0.067456722,0.777292568}};
-    double run_b[OBSERV_NUM][STATE_NUM] = {
-        {0.376659084,2.89177E-36,7.32707E-22},
-        {0.623340916,1.77971E-11,0.000132496},
-        {4.75775E-11,2.94127E-19,0.579184439},
-        {1.64936E-22,5.24812E-05,0.420680016},
-        {3.64058E-23,0.329060907,3.04952E-06},
-        {2.42714E-31,0.497695775,2.88081E-15},
-        {5.99981E-26,0.173190837,6.12921E-17},
-        {0,0,0}};
-    double walk_pi[STATE_NUM] = {0.008220815,1.15E-36,0.991779185};
-    double walk_a[STATE_NUM][STATE_NUM] = {{0.602985679,0.094537721,0.044079307},{0.03443364,0.789671219,0.025672161},{0.362580682,0.11579106,0.930248533}};
-    double walk_b[OBSERV_NUM][STATE_NUM] = {{0,0,0},
-        {5.87575E-13,0.014759726,8.07681E-24},
-        {0.2586356,6.47283E-12,2.29926E-08},
-        {0.7413644,2.85666E-05,0.999999977},
-        {8.79061E-10,0.944622461,1.31672E-11},
-        {1.47098E-21,0.033209383,2.9217E-26},
-        {2.06214E-35,0.007379863,3.49125E-42},
-        {0,0,0}};
+    double pre_pi[3] = {1,9.56820074913016E-77,1.81858419938713E-41};
+    double pre_a[3][3] = {{0.938655874201866,0.128135097379301,0.195148174983384},{0.0347142240780744,0.869569485812218,3.22171776979643E-25},{0.0266299017200585,0.00229541680848012,0.804851825016615}};
+    double pre_b[8][3] = {
+    {2.05436603274678E-15,0.0125713759559856,5.05122127258106E-13},
+    {2.52998394807497E-22,0.114285235965998,2.22910357695258E-27},
+    {2.27719498162092E-07,0.873138340658857,2.53255883998954E-25},
+    {0.999999772280499,5.04741915858667E-06,0.00287017823161201},
+    {5.84207610274566E-21,3.58200708685093E-37,0.98198902187119},
+    {7.82574783508609E-51,1.45012517083579E-169,0.0151407998966923},
+    {0,0,0},
+    {0,0,0}};
+
+    double fall_pi[3] = {1,2.02885E-62,1.4382E-69};
+    double fall_a[3][3]={{0.847339186,0.094980361,0.117705798},{0.075112028,0.883376935,0.029549676},{0.077548786,0.021642704,0.852744525}};
+    double fall_b[8][3]={
+    {1.16527E-35,3.66807E-31,0.015534493},
+    {1.76139E-20,0.000531981,0.166125668},
+    {5.75741E-07,6.65886E-05,0.81833829},
+    {0.999946355,0.000510303,1.5493E-06},
+    {5.3069E-05,0.465112339,3.67054E-12},
+    {1.87443E-14,0.273749465,1.1375E-11},
+    {1.3259E-10,0.221482264,3.84995E-25},
+    {1.53108E-27,0.038547061,1.69949E-30}};
+
+    double run_pi[3] = {5.23E-193,1,8.79E-132};
+    double run_a[3][3] = {{0.911397594,0.004520484,0.117142582},{0.016535984,0.928022794,0.105564851},{0.072066422,0.067456722,0.777292568}};
+    double run_b[8][3] = {
+    {0.376659084,2.89177E-36,7.32707E-22},
+    {0.623340916,0.0000000000177971,0.000132496},
+    {4.75775E-11,2.94127E-19,0.579184439},
+    {1.64936E-22,5.24812E-05,0.420680016},
+    {3.64058E-23,0.329060907,3.04952E-06},
+    {2.42714E-31,0.497695775,2.88081E-15},
+    {5.99981E-26,0.173190837,6.12921E-17},
+    {0,0,0}};
+
+    double walk_pi[3] = {0.008220815,1.15E-36,0.991779185};
+    double walk_a[3][3] = {{0.602985679,0.094537721,0.044079307},{0.03443364,0.789671219,0.025672161},{0.362580682,0.11579106,0.930248533}};
+    double walk_b[8][3] = {{0,0,0},
+                        {5.87575E-13,0.014759726,8.07681E-24},
+                        {0.2586356,6.47283E-12,2.29926E-08},
+                        {0.7413644,2.85666E-05,0.999999977},
+                        {8.79061E-10,0.944622461,1.31672E-11},
+                        {1.47098E-21,0.033209383,2.9217E-26},
+                        {2.06214E-35,0.007379863,3.49125E-42},
+                        {0,0,0}};
     double still_pi[STATE_NUM] = {1,0,0};
     double still_a[STATE_NUM][STATE_NUM] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
     double still_b[OBSERV_NUM][STATE_NUM] = {{0,0,0},
@@ -237,10 +235,10 @@ void acc_server(NetworkInterface *net)
     dumpHMM(stderr, &movement_arr[3]);
     dumpHMM(stderr, &movement_arr[4]);
     //end of declaration of Viterbi variables
-    printf("before while loop\n");
+    //printf("before while loop\n");
     //end of declaration of Viterbi variables
     while(1){
-        printf("after while loop with iter = %d\n", iter);
+        //printf("after while loop with iter = %d\n", iter);
         BSP_ACCELERO_AccGetXYZ(pDataXYZ);
         float x = pDataXYZ[0]*SCALE_MULTIPLIER, y = pDataXYZ[1]*SCALE_MULTIPLIER, z = pDataXYZ[2]*SCALE_MULTIPLIER;
         double sqr_sum = x*x + y*y + z*z;
@@ -271,10 +269,10 @@ void acc_server(NetworkInterface *net)
         }
         if (iter>=win_size-1){
             //run viterbi and send data
-            printf("before running viterbi with iter = %d\n",iter);
+            //printf("before running viterbi with iter = %d\n",iter);
             double prob[MOVEMENT_NUM] = {0};
             viterbi(movement_arr, win_size, buffer + (iter - win_size + 1), MOVEMENT_NUM, prob);
-            printf("finished viterbi\n");
+            //printf("finished viterbi\n");
             if(iter==buff_size-1){
                 memcpy(buffer, buffer + (iter - win_size + 1), win_size*sizeof(int));
                 iter = win_size - 1;
@@ -290,12 +288,11 @@ void acc_server(NetworkInterface *net)
                 }
             }
             //end of movement selection
-            printf("%d",argmax);
+            //printf("%d",argmax);
             response = socket.send(&argmax,1);
             if (0 >= response){
                 printf("Error seding: %d\n", response);
             }
-            
         }
         iter++;
         wait(0.01);
@@ -308,7 +305,6 @@ int main()
 {
 
     printf("\nConnecting to %s...\n", MBED_CONF_APP_WIFI_SSID);
-    //wifi.set_network("192.168.130.105","255.255.255.0","192.168.130.254");
     int ret = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
     if (ret != 0) {
         printf("\nConnection error\n");
@@ -322,11 +318,11 @@ int main()
     printf("Gateway: %s\n", wifi.get_gateway());
     printf("RSSI: %d\n\n", wifi.get_rssi());
 
-
+    Thread t(osPriorityNormal,32*1024);
     BSP_ACCELERO_Init();    
-    acc_server(&wifi);
-
-
+    t.start(callback(acc_server,&wifi));
+    //acc_server(&wifi);
+    wait(osWaitForever);
 
 }
 void HMM_init(HMM *model, char *name, int state_n, int observ_n, double pi[], double a[][STATE_NUM], double b[][STATE_NUM]){
@@ -335,9 +331,22 @@ void HMM_init(HMM *model, char *name, int state_n, int observ_n, double pi[], do
     model->state_num = state_n;
     model->observ_num = observ_n;
     //printf("sizeof(a) is %d\n", sizeof(a));
-    memcpy(model->initial, pi, sizeof(pi) * STATE_NUM);
+    /*memcpy(model->initial, pi, sizeof(pi) * STATE_NUM);
     memcpy(model->transition, a, sizeof(a) * STATE_NUM * STATE_NUM);
-    memcpy(model->observation, b, sizeof(b) * OBSERV_NUM * STATE_NUM);
+    memcpy(model->observation, b, sizeof(b) * OBSERV_NUM * STATE_NUM);*/
+    for(int i=0;i<STATE_NUM;i++) {
+        model->initial[i] = pi[i];
+    }
+    for(int i=0;i<STATE_NUM;i++) {
+        for(int j=0;j<STATE_NUM;j++) {
+            model->transition[i][j] = a[i][j];
+        }
+    }
+    for(int i=0;i<OBSERV_NUM;i++) {
+        for(int j=0;j<STATE_NUM;j++) {
+            model->observation[i][j] = b[i][j];
+        }
+    }
 }
 
 static void dumpHMM( FILE *fp, HMM *hmm )
@@ -347,7 +356,7 @@ static void dumpHMM( FILE *fp, HMM *hmm )
    //fprintf( fp, "model name: %s\n", hmm->model_name );
    fprintf( fp, "initial: %d\n", hmm->state_num );
    for( i = 0 ; i < hmm->state_num - 1; i++ )
-      fprintf( fp, "%.5lf ", hmm->initial[i]);
+      fprintf( fp, "%lf ", hmm->initial[i]);
    fprintf(fp, "%.5lf\n", hmm->initial[ hmm->state_num - 1 ] );
 
    fprintf( fp, "\ntransition: %d\n", hmm->state_num );
@@ -366,31 +375,23 @@ static void dumpHMM( FILE *fp, HMM *hmm )
 }
 
 void viterbi(HMM* hmm, int seqlen, int* seq, int model_num, double* p) {
-	printf("calling viterbi\n");
+	//printf("calling viterbi\n");
 	for(int i=0;i<model_num;i++)
 	{
-        //printf("I\n");
 		double viterbi[hmm[i].state_num][seqlen];
-        //printf("dafaq\n");
 		for(int j=0;j<hmm[i].state_num;j++)
 		{
-            //printf("am\n");
 			viterbi[j][0]=hmm[i].initial[j]*hmm[i].observation[seq[0]][j];
-            //printf("am\n");
 		}
 		for(int k=1;k<seqlen;k++)
 		{
-            //printf("the\n");
 			for(int l=0;l<hmm[i].state_num;l++)
 			{
-                //printf("bone\n");
 				double max=0;
 				for(int m=0;m<hmm[i].state_num;m++)
 				{
-                    //printf("of\n");
 					if(viterbi[m][k-1]*hmm[i].transition[m][l]>max)
 					{
-                        //printf("my\n");
 						max=viterbi[m][k-1]*hmm[i].transition[m][l];
 					}
 				}
@@ -399,7 +400,6 @@ void viterbi(HMM* hmm, int seqlen, int* seq, int model_num, double* p) {
 		}
 		for(int a=0;a<hmm[i].state_num;a++)
 		{
-            //printf("sword.\n");
 			if(viterbi[a][seqlen-1]>p[i])
 			{
 				p[i]=viterbi[a][seqlen-1];
@@ -407,10 +407,10 @@ void viterbi(HMM* hmm, int seqlen, int* seq, int model_num, double* p) {
 		}
 	}
 	//return p;
-    /*
-    double sum = p[0] + p[1] + p[2] + p[3];
-    printf("%lf, %lf, %lf, %lf.\n", p[0]/sum, p[1]/sum, p[2]/sum, p[3]/sum);
     
+    double sum = p[0] + p[1] + p[2] + p[3] +p[4];
+    printf("%lf, %lf, %lf, %lf., %lf \n", p[0]/sum, p[1]/sum, p[2]/sum, p[3]/sum, p[4]/sum);
+    /* 
     cout << p[0] << endl
          << p[1] << endl
          << p[2] << endl 

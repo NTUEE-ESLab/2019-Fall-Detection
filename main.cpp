@@ -131,7 +131,7 @@ void acc_server(NetworkInterface *net)
     int16_t pDataXYZ[3] = {0};
     char acc_json[64];
     int sample_num = 0;
-    //queue<double> window;
+    deque<double> output_buf;
     const int buff_size = 450;
     const int win_size = 150;
     int iter = 0;
@@ -281,18 +281,49 @@ void acc_server(NetworkInterface *net)
             //select maximum movement
             double max = 0;
             int argmax = 0;
+            double sum = prob[0]+prob[1]+prob[2]+prob[3]+prob[4];
             for (int i = 0; i < MOVEMENT_NUM; ++i){
-                if(prob[i]>=max){
-                    max = prob[i];
+                if(prob[i]/sum>=max){
+                    max = prob[i]/sum;
                     argmax = i;
                 }
             }
+            int len;
+            output_buf.push_back(argmax);
+            if(output_buf.size()==5){
+                int count;
+                for(int i=0;i<5;i++){
+                    if(output_buf[i]==argmax){
+                        count++;
+                    }
+                }
+                if (count==5){
+                    cout<<argmax<<endl;
+                }
+                output_buf.pop_back();
+            }
+            
             //end of movement selection
             //printf("%d",argmax);
-            response = socket.send(&argmax,1);
+            /*if(argmax==0){
+                len = sprintf(acc_json,"predict");
+                }
+            else if (argmax==1){
+                len = sprintf(acc_json,"fall");
+            }
+            else if (argmax==2){
+                len = sprintf(acc_json,"run");
+            }
+            else if (argmax==3){
+                len = sprintf(acc_json,"walk");
+            }
+            else if (argmax==4){
+                len = sprintf(acc_json,"still");
+            }
+            response = socket.send(acc_json,len);
             if (0 >= response){
                 printf("Error seding: %d\n", response);
-            }
+            }*/
         }
         iter++;
         wait(0.01);
@@ -408,8 +439,8 @@ void viterbi(HMM* hmm, int seqlen, int* seq, int model_num, double* p) {
 	}
 	//return p;
     
-    double sum = p[0] + p[1] + p[2] + p[3] +p[4];
-    printf("%lf, %lf, %lf, %lf., %lf \n", p[0]/sum, p[1]/sum, p[2]/sum, p[3]/sum, p[4]/sum);
+    //double sum = p[0] + p[1] + p[2] + p[3] +p[4];
+    //printf("%lf, %lf, %lf, %lf., %lf \n", p[0]/sum, p[1]/sum, p[2]/sum, p[3]/sum, p[4]/sum);
     /* 
     cout << p[0] << endl
          << p[1] << endl

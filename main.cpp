@@ -305,6 +305,9 @@ void acc_server(NetworkInterface *net)
             if (((current_state==3)||(current_state==4))&&(low_count>prev_bnd*ratio)){//walk->predict
                 argmax=0;
             }
+            else if ((current_state==2)&&(argmax==1)){
+                argmax=2;
+            }
             
             int len;
             int output_size = 20;

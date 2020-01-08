@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import RPi.GPIO as GPIO;
+from time import sleep;
+GPIO.setmode(GPIO.BCM)
 
 import socket
 
@@ -16,6 +19,14 @@ HOST = '192.168.1.237'  # Standard loopback interface address (localhost)
 PORT = 65431            # Port to listen on (non-privileged ports are > 1023)
 
 sample = 0
+
+POUT1 = 18 #red
+POUT2 = 23 #green
+
+GPIO.setup(POUT1, GPIO.OUT);
+GPIO.setup(POUT2, GPIO.OUT);
+GPIO.output(POUT1, False);
+GPIO.output(POUT2, False);
 
 def get_graph_data():
 
@@ -40,12 +51,26 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         a = 0
         #accel_arr = np.zeros((1000,3))
         #abs_acc = np.zeros(1000)
-        while True:
-            data = conn.recv(1024)
-            dec = data.decode()
-            movement_list = ["predict","fall","run","walk","still"]
-            print(movement_list[int(dec)])
-            """
+        try:
+            while True:
+                data = conn.recv(1024)
+                dec = data.decode()
+                movement_list = ["predict","fall","run","walk","still"]
+                print(movement_list[int(dec)])
+                if int(dec)==0:
+                    GPIO.output(POUT2, True);
+                    GPIO.output(POUT1, True);
+                elif int(dec)==1:
+                    GPIO.output(POUT1, True);
+                    GPIO.output(POUT2, False);
+                else:
+                    GPIO.output(POUT1, False);
+                    GPIO.output(POUT2, True);
+
+        except KeyboardInterrupt:
+            GPIO.cleanup() # clean up GPIO on CTRL+C exit
+        GPIO.cleanup() # clean up GPIO on normal exit
+                        """
             if (dec!=""):
                 x = dec.split(",")[:-1]
                 #print(x)
@@ -64,7 +89,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             pickle.dump(accel_arr,f)
             #print(type(data))
             #conn.sendall(get_graph_data().encode('utf-8'))
-
         with open('abs_acc_'+sys.argv[1]+'.csv', 'w', newline='', encoding='utf-8') as wf:
             writer = csv.writer(wf)
             for index in range (1000):

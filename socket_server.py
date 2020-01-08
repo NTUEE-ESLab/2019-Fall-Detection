@@ -41,17 +41,17 @@ def get_graph_data():
         's':sample
     })
     return graph_to_send
-
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.bind((HOST, PORT))
-    s.listen()
-    conn, addr = s.accept()
-    with conn:
-        print('Connected by', addr)
-        a = 0
-        #accel_arr = np.zeros((1000,3))
-        #abs_acc = np.zeros(1000)
-        try:
+try:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, PORT))
+        s.listen()
+        conn, addr = s.accept()
+        with conn:
+            print('Connected by', addr)
+            a = 0
+            #accel_arr = np.zeros((1000,3))
+            #abs_acc = np.zeros(1000)
+            
             while True:
                 data = conn.recv(1024)
                 dec = data.decode()
@@ -67,10 +67,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     GPIO.output(POUT1, False);
                     GPIO.output(POUT2, True);
 
-        except KeyboardInterrupt:
-            GPIO.cleanup() # clean up GPIO on CTRL+C exit
-        GPIO.cleanup() # clean up GPIO on normal exit
-                        """
+except KeyboardInterrupt:
+    GPIO.cleanup() # clean up GPIO on CTRL+C exit
+GPIO.cleanup() # clean up GPIO on normal exit
+"""
             if (dec!=""):
                 x = dec.split(",")[:-1]
                 #print(x)
@@ -83,8 +83,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     a = a+1
                     #print(x[3*(b-1):3*b])
                 #print(dec)
-            """
-        """
+"""
+"""
         with open('accel_arr_'+sys.argv[1], 'wb') as f:
             pickle.dump(accel_arr,f)
             #print(type(data))
@@ -93,4 +93,4 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             writer = csv.writer(wf)
             for index in range (1000):
                 writer.writerow([abs_acc[index]])
-        """
+"""

@@ -135,6 +135,7 @@ void acc_server(NetworkInterface *net)
     const int buff_size = 450;
     const int win_size = 150;
     int iter = 0;
+    int current_state=0;
     int buffer[buff_size];
 
     // Open a socket on the network interface, and create a TCP connection to addr
@@ -271,11 +272,14 @@ void acc_server(NetworkInterface *net)
             //run viterbi and send data
             //printf("before running viterbi with iter = %d\n",iter);
             double prob[MOVEMENT_NUM] = {0};
-            viterbi(movement_arr, win_size, buffer + (iter - win_size + 1), MOVEMENT_NUM, prob);
+            viterbi(movement_arr, win_size, buffer + (iter - (win_size-1)), MOVEMENT_NUM, prob);
             //printf("finished viterbi\n");
-            if(iter==buff_size-1){
-                memcpy(buffer, buffer + (iter - win_size + 1), win_size*sizeof(int));
-                iter = win_size - 1;
+            if(iter>=buff_size-win_size){
+                buffer[iter-(buff_size-win_size)]=buffer[iter];
+                if(iter==buff_size-1){
+                    //memcpy(buffer, buffer + (iter - win_size + 1), win_size*sizeof(int));
+                    iter = win_size - 1;
+                }
             }
             //end of viterbi
             //select maximum movement
@@ -288,19 +292,39 @@ void acc_server(NetworkInterface *net)
                     argmax = i;
                 }
             }
+            //20200103
+            const int prev_bnd=30;
+            const int quantized_thold=1;
+            const double ratio=4/5;
+            int low_count = 0;
+            for (int j=0;j<prev_bnd;++j){
+                if (buffer[iter-prev_bnd+j+1]<=quantized_thold){
+                    low_count++;
+                }
+            }
+            if (((current_state==3)||(current_state==4))&&(low_count>prev_bnd*ratio)){//walk->predict
+                argmax=0;
+            }
+            
             int len;
+            int output_size = 20;
             output_buf.push_back(argmax);
-            if(output_buf.size()==5){
-                int count;
-                for(int i=0;i<5;i++){
+            if(output_buf.size()==output_size){
+                int count=0;
+                for(int i=0;i<output_size;i++){
                     if(output_buf[i]==argmax){
                         count++;
                     }
                 }
-                if (count==5){
-                    cout<<argmax<<endl;
+                if (count==output_size){
+                    if(current_state!=argmax){
+                        current_state = argmax;
+                        len = sprintf(acc_json,"%d",argmax);
+                        cout<<movement_arr[argmax].model_name<<endl;
+                        socket.send(acc_json,len);
+                    }
                 }
-                output_buf.pop_back();
+                output_buf.pop_front();
             }
             
             //end of movement selection
@@ -407,7 +431,7 @@ static void dumpHMM( FILE *fp, HMM *hmm )
 
 void viterbi(HMM* hmm, int seqlen, int* seq, int model_num, double* p) {
 	//printf("calling viterbi\n");
-	for(int i=0;i<model_num;i++)
+	for(int i=1;i<model_num;i++)
 	{
 		double viterbi[hmm[i].state_num][seqlen];
 		for(int j=0;j<hmm[i].state_num;j++)

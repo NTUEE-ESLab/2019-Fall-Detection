@@ -10,5 +10,7 @@ Replace the corresponding code in the STM32 with the code on our repository and 
 The result is as what we have expected. It can predeict can detect fall with good precision. However, there is still room for improvement. One we can't accomplish is that when determining walking and runnung state, the output often will have false statement noise sometime. For example, when we test running, it will first output fall then running. We think it's mainly because the data we collect looked too similar in the window we feed in the HMM models, therefore miss determinations happen. 
 ## Problems Enconutered
 At the beginning, we was worried about the MCU is not able to support the computing power we wanted. Fortunately, with a few code of thread management, it did not disappoint us and performed as the way we looked for.
+## Future Work
+Since the movement detection is not prefect at all now, therefore the future work will be focused on pursing better precision of the result. Implement Kalman filter or re-train the model with better data or with resied window size are efforts can be working on. Also, though we have made the prediction, we can only predict but couldn't do anything after that. Hence, developing a protection gear to take action after prediction is also a subject that can focus on.
 ## References
 https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=6450028
